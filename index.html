@@ -34,6 +34,9 @@ body { display: flex; height: 100vh; font-family: -apple-system, BlinkMacSystemF
   background: #1e5247;
   color: #fff;
   flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
 }
 
 #sidebar-header h1 {
@@ -46,6 +49,19 @@ body { display: flex; height: 100vh; font-family: -apple-system, BlinkMacSystemF
   font-size: 12px;
   opacity: 0.75;
   margin-top: 3px;
+}
+
+#close-sidebar {
+  display: none;
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0 0 8px;
+  opacity: 0.8;
+  flex-shrink: 0;
 }
 
 #controls {
@@ -67,7 +83,7 @@ body { display: flex; height: 100vh; font-family: -apple-system, BlinkMacSystemF
   outline: none;
   background: #fff;
 }
-#search:focus { border-color: #3BC4A8; box-shadow: 0 0 0 2px #3bc4a830; }
+#search:focus { border-color: #ef7409; box-shadow: 0 0 0 2px #ef740930; }
 
 #region-select {
   width: 100%;
@@ -79,7 +95,7 @@ body { display: flex; height: 100vh; font-family: -apple-system, BlinkMacSystemF
   outline: none;
   cursor: pointer;
 }
-#region-select:focus { border-color: #3BC4A8; }
+#region-select:focus { border-color: #ef7409; }
 
 #view-toggle {
   display: flex;
@@ -96,12 +112,13 @@ body { display: flex; height: 100vh; font-family: -apple-system, BlinkMacSystemF
   transition: all 0.15s;
   color: #555;
 }
-.toggle-btn:hover { background: #f0faf8; }
-.toggle-btn.active { background: #3BC4A8; color: #fff; border-color: #29a98f; font-weight: 500; }
+.toggle-btn:hover { background: #fef3e8; }
+.toggle-btn.active { background: #ef7409; color: #fff; border-color: #c55a00; font-weight: 500; }
 
 #spot-list {
   flex: 1;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .spot-item {
@@ -111,8 +128,8 @@ body { display: flex; height: 100vh; font-family: -apple-system, BlinkMacSystemF
   transition: background 0.1s;
   border-left: 3px solid transparent;
 }
-.spot-item:hover { background: #f0faf8; }
-.spot-item.selected { background: #e4f8f3; border-left-color: #3BC4A8; }
+.spot-item:hover { background: #fef3e8; }
+.spot-item.selected { background: #fdebd0; border-left-color: #ef7409; }
 
 .spot-name {
   font-size: 13px;
@@ -170,6 +187,66 @@ body { display: flex; height: 100vh; font-family: -apple-system, BlinkMacSystemF
 /* ── Map ── */
 #map { flex: 1; }
 
+/* ── Mobile FAB (floating action button) ── */
+#fab {
+  display: none;
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2000;
+  background: #1e5247;
+  color: #fff;
+  border: none;
+  border-radius: 28px;
+  padding: 12px 22px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  white-space: nowrap;
+}
+
+/* ── Backdrop ── */
+#backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 999;
+}
+
+/* ── Mobile overrides ── */
+@media (max-width: 768px) {
+  body { flex-direction: column; }
+
+  #sidebar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 70vh;
+    border-right: none;
+    border-top: 1px solid #d8d4cc;
+    border-radius: 16px 16px 0 0;
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+    z-index: 1000;
+  }
+
+  #sidebar.open {
+    transform: translateY(0);
+  }
+
+  #close-sidebar { display: block; }
+  #fab { display: block; }
+  #backdrop.visible { display: block; }
+
+  #map { width: 100%; height: 100vh; }
+}
+
 /* ── Popup ── */
 .leaflet-popup-content-wrapper { border-radius: 8px; }
 .spot-popup-inner { min-width: 200px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
@@ -187,8 +264,11 @@ body { display: flex; height: 100vh; font-family: -apple-system, BlinkMacSystemF
 
 <div id="sidebar">
   <div id="sidebar-header">
-    <h1>Kayak Launch Spots</h1>
-    <div id="count-line">Loading…</div>
+    <div>
+      <h1>Kayak Launch Spots</h1>
+      <div id="count-line">Loading…</div>
+    </div>
+    <button id="close-sidebar" onclick="closeSidebar()" aria-label="Close">✕</button>
   </div>
 
   <div id="error-banner">
@@ -211,6 +291,8 @@ body { display: flex; height: 100vh; font-family: -apple-system, BlinkMacSystemF
 </div>
 
 <div id="map"></div>
+<div id="backdrop" onclick="closeSidebar()"></div>
+<button id="fab" onclick="openSidebar()">☰ Spots list</button>
 
 <script>
 // ── Data ────────────────────────────────────────────────────────────────────
@@ -308,6 +390,7 @@ function selectSpot(s, pan = true) {
     const el = document.querySelector('.spot-item.selected');
     if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   });
+  if (!pan && isMobile()) closeSidebar();
 }
 
 function displayName(s) {
@@ -376,6 +459,19 @@ function updateCount(visible) {
   document.getElementById('count-line').textContent = viewMode === 'map'
     ? `${visible} visible · ${total} total${regionFilter ? '' : ' · ' + grand + ' all'}`
     : `${total} spots${regionFilter || searchText ? ' (filtered)' : ''}`;
+}
+
+// ── Mobile sidebar ───────────────────────────────────────────────────────────
+function isMobile() { return window.innerWidth <= 768; }
+
+function openSidebar() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('backdrop').classList.add('visible');
+}
+
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('backdrop').classList.remove('visible');
 }
 
 // ── View mode toggle ─────────────────────────────────────────────────────────
