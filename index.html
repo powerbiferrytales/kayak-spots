@@ -383,7 +383,7 @@ function selectSpot(s, pan = true) {
       <div class="pop-region">${esc(s.region)}${s.section ? ' · ' + esc(s.section) : ''}</div>
       <div class="pop-coords">${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}</div>
       <a class="pop-link" href="${esc(s.maps_url)}" target="_blank">Open in Maps ↗</a>
-      <a class="pop-link" href="${esc(wikiUrl(s))}" target="_blank" style="background:#4a7c6f;margin-left:6px">Wiki source ↗</a>
+      <a class="pop-link" href="${esc(wikiUrl(s))}" target="_blank" style="background:#4a7c6f;margin-left:6px">${s.source === 'osm' ? 'View on OSM ↗' : 'Wiki source ↗'}</a>
     </div>`)
     .openOn(map);
 
@@ -407,9 +407,8 @@ function esc(v) {
 }
 
 function wikiUrl(s) {
-  // Append section anchor in MediaWiki format (spaces → underscores)
   const base = s.source_url;
-  if (!s.section) return base;
+  if (s.source === 'osm' || !s.section) return base;
   const anchor = s.section.trim().replace(/ /g, '_');
   return base + '#' + encodeURIComponent(anchor).replace(/%2F/g, '/');
 }
