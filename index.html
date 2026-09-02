@@ -11,7 +11,10 @@
 <link rel="manifest" href="manifest.json">
 <title>Kayak Launch Spots</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
 <script src="kayak_spots.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -247,6 +250,15 @@ body { display: flex; height: 100vh; font-family: -apple-system, BlinkMacSystemF
   #map { width: 100%; height: 100vh; }
 }
 
+/* ── Cluster icons ── */
+.marker-cluster-small  { background-color: rgba(239,116,9,0.25); }
+.marker-cluster-small div  { background-color: rgba(239,116,9,0.7); }
+.marker-cluster-medium { background-color: rgba(197,90,0,0.25); }
+.marker-cluster-medium div { background-color: rgba(197,90,0,0.7); }
+.marker-cluster-large  { background-color: rgba(138,62,0,0.25); }
+.marker-cluster-large div  { background-color: rgba(138,62,0,0.7); }
+.marker-cluster div { color: #fff; font-weight: 700; }
+
 /* ── Popup ── */
 .leaflet-popup-content-wrapper { border-radius: 8px; }
 .spot-popup-inner { min-width: 200px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
@@ -312,6 +324,7 @@ if (!allSpots) {
 // ── State ───────────────────────────────────────────────────────────────────
 let filtered = allSpots ? [...allSpots] : [];
 let markers = [];
+let clusterGroup = null;
 let selectedSpot = null;
 let viewMode = 'map';
 let countryFilter = '';
@@ -355,16 +368,29 @@ function makeIcon(sel) {
 
 // ── Render markers ───────────────────────────────────────────────────────────
 function renderMarkers() {
-  markers.forEach(({ m }) => map.removeLayer(m));
+  if (clusterGroup) map.removeLayer(clusterGroup);
+  clusterGroup = L.markerClusterGroup({
+    maxClusterRadius: 60,
+    showCoverageOnHover: false,
+    iconCreateFunction(cluster) {
+      const count = cluster.getChildCount();
+      const size = count < 10 ? 'small' : count < 100 ? 'medium' : 'large';
+      return L.divIcon({
+        html: `<div><span>${count}</span></div>`,
+        className: `marker-cluster marker-cluster-${size}`,
+        iconSize: L.point(40, 40),
+      });
+    },
+  });
   markers = [];
   filtered.forEach(s => {
-    const sel = s === selectedSpot;
-    const m = L.marker([s.lat, s.lng], { icon: makeIcon(sel) });
+    const m = L.marker([s.lat, s.lng], { icon: makeIcon(false) });
     m.bindTooltip(displayName(s).text, { direction: 'top' });
     m.on('click', () => selectSpot(s, false));
-    m.addTo(map);
+    clusterGroup.addLayer(m);
     markers.push({ m, s });
   });
+  map.addLayer(clusterGroup);
 }
 
 // ── Select spot ──────────────────────────────────────────────────────────────
@@ -377,28 +403,37 @@ function selectSpot(s, pan = true) {
     if (sel) m.setZIndexOffset(1000);
   });
 
+  const openPopup = () => {
+    map.closePopup();
+    L.popup({ maxWidth: 280 })
+      .setLatLng([s.lat, s.lng])
+      .setContent(`<div class="spot-popup-inner">
+        <div class="pop-name">${esc(displayName(s).text)}</div>
+        <div class="pop-region">${esc(s.region)}${s.section ? ' · ' + esc(s.section) : ''}</div>
+        <div class="pop-coords">${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}</div>
+        <a class="pop-link" href="${esc(s.maps_url)}" target="_blank">Open in Maps ↗</a>
+        <a class="pop-link" href="${esc(wikiUrl(s))}" target="_blank" style="background:#4a7c6f;margin-left:6px">${s.source === 'osm' ? 'View on OSM ↗' : 'Wiki source ↗'}</a>
+      </div>`)
+      .openOn(map);
+    renderList();
+    requestAnimationFrame(() => {
+      const el = document.querySelector('.spot-item.selected');
+      if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    });
+    if (!pan && isMobile()) closeSidebar();
+  };
+
   if (pan) {
-    map.setView([s.lat, s.lng], Math.max(map.getZoom(), 13), { animate: true });
+    const entry = markers.find(({ s: ms }) => ms === s);
+    if (entry && clusterGroup) {
+      clusterGroup.zoomToShowLayer(entry.m, openPopup);
+    } else {
+      map.setView([s.lat, s.lng], Math.max(map.getZoom(), 13), { animate: true });
+      openPopup();
+    }
+  } else {
+    openPopup();
   }
-
-  map.closePopup();
-  L.popup({ maxWidth: 280 })
-    .setLatLng([s.lat, s.lng])
-    .setContent(`<div class="spot-popup-inner">
-      <div class="pop-name">${esc(displayName(s).text)}</div>
-      <div class="pop-region">${esc(s.region)}${s.section ? ' · ' + esc(s.section) : ''}</div>
-      <div class="pop-coords">${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}</div>
-      <a class="pop-link" href="${esc(s.maps_url)}" target="_blank">Open in Maps ↗</a>
-      <a class="pop-link" href="${esc(wikiUrl(s))}" target="_blank" style="background:#4a7c6f;margin-left:6px">${s.source === 'osm' ? 'View on OSM ↗' : 'Wiki source ↗'}</a>
-    </div>`)
-    .openOn(map);
-
-  renderList();
-  requestAnimationFrame(() => {
-    const el = document.querySelector('.spot-item.selected');
-    if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-  });
-  if (!pan && isMobile()) closeSidebar();
 }
 
 function displayName(s) {
