@@ -286,6 +286,11 @@ body { display: flex; height: 100vh; font-family: -apple-system, BlinkMacSystemF
       <button class="toggle-btn active" id="btn-map" onclick="setView('map')">Map view</button>
       <button class="toggle-btn" id="btn-all" onclick="setView('all')">All spots</button>
     </div>
+    <div id="source-toggle">
+      <button class="toggle-btn active" id="btn-src-all" onclick="setSource('')">All sources</button>
+      <button class="toggle-btn" id="btn-src-wiki" onclick="setSource('wiki')">Wiki</button>
+      <button class="toggle-btn" id="btn-src-osm" onclick="setSource('osm')">OSM</button>
+    </div>
   </div>
 
   <div id="spot-list"></div>
@@ -311,6 +316,7 @@ let selectedSpot = null;
 let viewMode = 'map';
 let countryFilter = '';
 let regionFilter = '';
+let sourceFilter = '';
 let searchText = '';
 
 // ── Map ─────────────────────────────────────────────────────────────────────
@@ -420,6 +426,7 @@ function applyFilters() {
   filtered = allSpots.filter(s => {
     if (countryFilter && (s.country || 'Europe') !== countryFilter) return false;
     if (regionFilter && s.region !== regionFilter) return false;
+    if (sourceFilter && (s.source || 'wiki') !== sourceFilter) return false;
     if (q && !s.name.toLowerCase().includes(q) && !s.region.toLowerCase().includes(q)) return false;
     return true;
   });
@@ -477,6 +484,15 @@ function updateCount(visible) {
   document.getElementById('count-line').textContent = viewMode === 'map'
     ? `${visible} visible · ${total} total${regionFilter ? '' : ' · ' + grand + ' all'}`
     : `${total} spots${regionFilter || searchText ? ' (filtered)' : ''}`;
+}
+
+// ── Source filter ────────────────────────────────────────────────────────────
+function setSource(src) {
+  sourceFilter = src;
+  document.getElementById('btn-src-all').classList.toggle('active', src === '');
+  document.getElementById('btn-src-wiki').classList.toggle('active', src === 'wiki');
+  document.getElementById('btn-src-osm').classList.toggle('active', src === 'osm');
+  applyFilters();
 }
 
 // ── Mobile sidebar ───────────────────────────────────────────────────────────
