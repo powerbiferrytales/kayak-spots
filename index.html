@@ -299,9 +299,10 @@ body { display: flex; height: 100vh; font-family: -apple-system, BlinkMacSystemF
       <button class="toggle-btn" id="btn-all" onclick="setView('all')">All spots</button>
     </div>
     <div id="source-toggle">
-      <button class="toggle-btn active" id="btn-src-all" onclick="setSource('')">All sources</button>
+      <button class="toggle-btn active" id="btn-src-all" onclick="setSource('')">All</button>
       <button class="toggle-btn" id="btn-src-wiki" onclick="setSource('wiki')">Wiki</button>
       <button class="toggle-btn" id="btn-src-osm" onclick="setSource('osm')">OSM</button>
+      <button class="toggle-btn" id="btn-src-personal" onclick="setSource('personal')">Mine</button>
     </div>
   </div>
 
@@ -346,9 +347,9 @@ baseLayers['Street'].addTo(map);
 L.control.layers(baseLayers, null, { position: 'topright', collapsed: true }).addTo(map);
 
 // ── Pin icon ─────────────────────────────────────────────────────────────────
-function makeIcon(sel) {
-  const fill   = sel ? '#c55a00' : '#ef7409';
-  const stroke = sel ? '#8a3e00' : '#b85800';
+function makeIcon(sel, personal) {
+  const fill   = personal ? (sel ? '#1d4ed8' : '#3b82f6') : (sel ? '#c55a00' : '#ef7409');
+  const stroke = personal ? (sel ? '#1e3a8a' : '#1d4ed8') : (sel ? '#8a3e00' : '#b85800');
   const w = sel ? 30 : 24;
   const h = sel ? 42 : 34;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 24 34">
@@ -384,7 +385,8 @@ function renderMarkers() {
   });
   markers = [];
   filtered.forEach(s => {
-    const m = L.marker([s.lat, s.lng], { icon: makeIcon(false) });
+    const personal = s.source === 'personal';
+    const m = L.marker([s.lat, s.lng], { icon: makeIcon(false, personal) });
     m.bindTooltip(displayName(s).text, { direction: 'top' });
     m.on('click', () => selectSpot(s, false));
     clusterGroup.addLayer(m);
@@ -399,7 +401,7 @@ function selectSpot(s, pan = true) {
 
   markers.forEach(({ m, s: ms }) => {
     const sel = ms === s;
-    m.setIcon(makeIcon(sel));
+    m.setIcon(makeIcon(sel, ms.source === 'personal'));
     if (sel) m.setZIndexOffset(1000);
   });
 
@@ -412,7 +414,7 @@ function selectSpot(s, pan = true) {
         <div class="pop-region">${esc(s.region)}${s.section ? ' · ' + esc(s.section) : ''}</div>
         <div class="pop-coords">${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}</div>
         <a class="pop-link" href="${esc(s.maps_url)}" target="_blank">Open in Maps ↗</a>
-        <a class="pop-link" href="${esc(wikiUrl(s))}" target="_blank" style="background:#4a7c6f;margin-left:6px">${s.source === 'osm' ? 'View on OSM ↗' : 'Wiki source ↗'}</a>
+        ${s.source !== 'personal' ? `<a class="pop-link" href="${esc(wikiUrl(s))}" target="_blank" style="background:#4a7c6f;margin-left:6px">${s.source === 'osm' ? 'View on OSM ↗' : 'Wiki source ↗'}</a>` : ''}
       </div>`)
       .openOn(map);
     renderList();
@@ -527,6 +529,7 @@ function setSource(src) {
   document.getElementById('btn-src-all').classList.toggle('active', src === '');
   document.getElementById('btn-src-wiki').classList.toggle('active', src === 'wiki');
   document.getElementById('btn-src-osm').classList.toggle('active', src === 'osm');
+  document.getElementById('btn-src-personal').classList.toggle('active', src === 'personal');
   applyFilters();
 }
 
