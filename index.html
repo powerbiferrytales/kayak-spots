@@ -280,6 +280,7 @@ body { display: flex; height: 100vh; font-family: -apple-system, BlinkMacSystemF
 
   <div id="controls">
     <input type="text" id="search" placeholder="Search spots or regions…">
+    <select id="country-select"><option value="">All countries</option></select>
     <select id="region-select"><option value="">All regions</option></select>
     <div id="view-toggle">
       <button class="toggle-btn active" id="btn-map" onclick="setView('map')">Map view</button>
@@ -308,6 +309,7 @@ let filtered = allSpots ? [...allSpots] : [];
 let markers = [];
 let selectedSpot = null;
 let viewMode = 'map';
+let countryFilter = '';
 let regionFilter = '';
 let searchText = '';
 
@@ -417,6 +419,7 @@ function applyFilters() {
   if (!allSpots) return;
   const q = searchText.toLowerCase();
   filtered = allSpots.filter(s => {
+    if (countryFilter && (s.country || 'Europe') !== countryFilter) return false;
     if (regionFilter && s.region !== regionFilter) return false;
     if (q && !s.name.toLowerCase().includes(q) && !s.region.toLowerCase().includes(q)) return false;
     return true;
@@ -424,6 +427,22 @@ function applyFilters() {
   selectedSpot = null;
   renderMarkers();
   renderList();
+}
+
+function repopulateRegions() {
+  const regions = [...new Set(
+    allSpots
+      .filter(s => !countryFilter || (s.country || 'Europe') === countryFilter)
+      .map(s => s.region)
+  )].sort();
+  const sel = document.getElementById('region-select');
+  sel.innerHTML = '<option value="">All regions</option>';
+  regions.forEach(r => {
+    const o = document.createElement('option');
+    o.value = r; o.textContent = r;
+    sel.appendChild(o);
+  });
+  regionFilter = '';
 }
 
 // ── Sidebar list ─────────────────────────────────────────────────────────────
@@ -490,6 +509,12 @@ document.getElementById('search').addEventListener('input', e => {
   applyFilters();
 });
 
+document.getElementById('country-select').addEventListener('change', e => {
+  countryFilter = e.target.value;
+  repopulateRegions();
+  applyFilters();
+});
+
 document.getElementById('region-select').addEventListener('change', e => {
   regionFilter = e.target.value;
   applyFilters();
@@ -497,14 +522,17 @@ document.getElementById('region-select').addEventListener('change', e => {
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 if (allSpots) {
-  // Populate region dropdown
-  const regions = [...new Set(allSpots.map(s => s.region))].sort();
-  const sel = document.getElementById('region-select');
-  regions.forEach(r => {
+  // Populate country dropdown
+  const countries = [...new Set(allSpots.map(s => s.country || 'Europe'))].sort();
+  const csel = document.getElementById('country-select');
+  countries.forEach(c => {
     const o = document.createElement('option');
-    o.value = r; o.textContent = r;
-    sel.appendChild(o);
+    o.value = c; o.textContent = c;
+    csel.appendChild(o);
   });
+
+  // Populate region dropdown (all regions initially)
+  repopulateRegions();
 
   renderMarkers();
   renderList();
