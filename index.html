@@ -156,6 +156,18 @@ body { display: flex; height: 100vh; font-family: -apple-system, BlinkMacSystemF
   line-height: 1.6;
 }
 
+/* ── Disclaimer footer ── */
+#disclaimer {
+  flex-shrink: 0;
+  padding: 10px 14px;
+  border-top: 1px solid #e4e0d8;
+  background: #fafaf8;
+  font-size: 10px;
+  color: #999;
+  line-height: 1.55;
+}
+#disclaimer a { color: #888; }
+
 /* ── Error banner ── */
 #error-banner {
   padding: 16px;
@@ -308,6 +320,10 @@ body { display: flex; height: 100vh; font-family: -apple-system, BlinkMacSystemF
   </div>
 
   <div id="spot-list"></div>
+
+  <div id="disclaimer">
+    ⚠️ Information is aggregated from multiple sources and may be inaccurate, outdated, or relate to private/club locations. Always verify access and conditions at the original source (linked on each marker) before visiting. Locations may involve private property, tidal hazards, or restricted access. Use this map at your own risk.
+  </div>
 </div>
 
 <div id="map"></div>
