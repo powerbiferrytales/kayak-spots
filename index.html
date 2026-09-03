@@ -540,11 +540,13 @@ function isMobile() { return window.innerWidth <= 768; }
 function openSidebar() {
   document.getElementById('sidebar').classList.add('open');
   document.getElementById('backdrop').classList.add('visible');
+  document.getElementById('fab').style.display = 'none';
 }
 
 function closeSidebar() {
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('backdrop').classList.remove('visible');
+  document.getElementById('fab').style.display = '';
 }
 
 // ── View mode toggle ─────────────────────────────────────────────────────────
