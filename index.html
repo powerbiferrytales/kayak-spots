@@ -88,17 +88,6 @@ body { display: flex; height: 100vh; font-family: -apple-system, BlinkMacSystemF
 }
 #search:focus { border-color: #ef7409; box-shadow: 0 0 0 2px #ef740930; }
 
-#region-select {
-  width: 100%;
-  padding: 6px 8px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 13px;
-  background: #fff;
-  outline: none;
-  cursor: pointer;
-}
-#region-select:focus { border-color: #ef7409; }
 
 #view-toggle {
   display: flex;
@@ -292,8 +281,6 @@ body { display: flex; height: 100vh; font-family: -apple-system, BlinkMacSystemF
 
   <div id="controls">
     <input type="text" id="search" placeholder="Search spots or regions…">
-    <select id="country-select"><option value="">All countries</option></select>
-    <select id="region-select"><option value="">All regions</option></select>
     <div id="view-toggle">
       <button class="toggle-btn active" id="btn-map" onclick="setView('map')">Map view</button>
       <button class="toggle-btn" id="btn-all" onclick="setView('all')">All spots</button>
@@ -302,7 +289,6 @@ body { display: flex; height: 100vh; font-family: -apple-system, BlinkMacSystemF
       <button class="toggle-btn active" id="btn-src-all" onclick="setSource('')">All</button>
       <button class="toggle-btn" id="btn-src-wiki" onclick="setSource('wiki')">Wiki</button>
       <button class="toggle-btn" id="btn-src-osm" onclick="setSource('osm')">OSM</button>
-      <button class="toggle-btn" id="btn-src-personal" onclick="setSource('personal')">Mine</button>
     </div>
   </div>
 
@@ -328,8 +314,6 @@ let markers = [];
 let clusterGroup = null;
 let selectedSpot = null;
 let viewMode = 'map';
-let countryFilter = '';
-let regionFilter = '';
 let sourceFilter = '';
 let searchText = '';
 
@@ -461,8 +445,6 @@ function applyFilters() {
   if (!allSpots) return;
   const q = searchText.toLowerCase();
   filtered = allSpots.filter(s => {
-    if (countryFilter && (s.country || 'Europe') !== countryFilter) return false;
-    if (regionFilter && s.region !== regionFilter) return false;
     if (sourceFilter && (s.source || 'wiki') !== sourceFilter) return false;
     if (q && !s.name.toLowerCase().includes(q) && !s.region.toLowerCase().includes(q)) return false;
     return true;
@@ -470,22 +452,6 @@ function applyFilters() {
   selectedSpot = null;
   renderMarkers();
   renderList();
-}
-
-function repopulateRegions() {
-  const regions = [...new Set(
-    allSpots
-      .filter(s => !countryFilter || (s.country || 'Europe') === countryFilter)
-      .map(s => s.region)
-  )].sort();
-  const sel = document.getElementById('region-select');
-  sel.innerHTML = '<option value="">All regions</option>';
-  regions.forEach(r => {
-    const o = document.createElement('option');
-    o.value = r; o.textContent = r;
-    sel.appendChild(o);
-  });
-  regionFilter = '';
 }
 
 // ── Sidebar list ─────────────────────────────────────────────────────────────
@@ -519,8 +485,8 @@ function updateCount(visible) {
   const total = filtered.length;
   const grand = allSpots ? allSpots.length : 0;
   document.getElementById('count-line').textContent = viewMode === 'map'
-    ? `${visible} visible · ${total} total${regionFilter ? '' : ' · ' + grand + ' all'}`
-    : `${total} spots${regionFilter || searchText ? ' (filtered)' : ''}`;
+    ? `${visible} visible · ${total} total · ${grand} all`
+    : `${total} spots${sourceFilter || searchText ? ' (filtered)' : ''}`;
 }
 
 // ── Source filter ────────────────────────────────────────────────────────────
@@ -529,7 +495,6 @@ function setSource(src) {
   document.getElementById('btn-src-all').classList.toggle('active', src === '');
   document.getElementById('btn-src-wiki').classList.toggle('active', src === 'wiki');
   document.getElementById('btn-src-osm').classList.toggle('active', src === 'osm');
-  document.getElementById('btn-src-personal').classList.toggle('active', src === 'personal');
   applyFilters();
 }
 
@@ -562,31 +527,8 @@ document.getElementById('search').addEventListener('input', e => {
   applyFilters();
 });
 
-document.getElementById('country-select').addEventListener('change', e => {
-  countryFilter = e.target.value;
-  repopulateRegions();
-  applyFilters();
-});
-
-document.getElementById('region-select').addEventListener('change', e => {
-  regionFilter = e.target.value;
-  applyFilters();
-});
-
 // ── Init ─────────────────────────────────────────────────────────────────────
 if (allSpots) {
-  // Populate country dropdown
-  const countries = [...new Set(allSpots.map(s => s.country || 'Europe'))].sort();
-  const csel = document.getElementById('country-select');
-  countries.forEach(c => {
-    const o = document.createElement('option');
-    o.value = c; o.textContent = c;
-    csel.appendChild(o);
-  });
-
-  // Populate region dropdown (all regions initially)
-  repopulateRegions();
-
   renderMarkers();
   renderList();
 }
