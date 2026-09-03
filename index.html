@@ -406,16 +406,20 @@ function selectSpot(s, pan = true) {
 
   const openPopup = () => {
     map.closePopup();
+    const inner = document.createElement('div');
+    inner.className = 'spot-popup-inner';
+    inner.innerHTML = `
+      <div class="pop-name">${esc(displayName(s).text)}</div>
+      <div class="pop-region">${esc(s.region)}${s.section ? ' · ' + esc(s.section) : ''}</div>
+      <div class="pop-coords">${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}</div>
+      <a class="pop-link" href="${esc(s.maps_url)}" target="_blank">Open in Maps ↗</a>
+      ${s.source !== 'personal' ? `<a class="pop-link" href="${esc(wikiUrl(s))}" target="_blank" style="background:#4a7c6f;margin-left:6px">${s.source === 'osm' ? 'View on OSM ↗' : 'Wiki source ↗'}</a>` : ''}
+      <br><button class="pop-share">Share this spot</button>
+    `;
+    inner.querySelector('.pop-share').addEventListener('click', () => shareSpot(s.lat, s.lng, displayName(s).text));
     L.popup({ maxWidth: 280, autoPan: false })
       .setLatLng([s.lat, s.lng])
-      .setContent(`<div class="spot-popup-inner">
-        <div class="pop-name">${esc(displayName(s).text)}</div>
-        <div class="pop-region">${esc(s.region)}${s.section ? ' · ' + esc(s.section) : ''}</div>
-        <div class="pop-coords">${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}</div>
-        <a class="pop-link" href="${esc(s.maps_url)}" target="_blank">Open in Maps ↗</a>
-        ${s.source !== 'personal' ? `<a class="pop-link" href="${esc(wikiUrl(s))}" target="_blank" style="background:#4a7c6f;margin-left:6px">${s.source === 'osm' ? 'View on OSM ↗' : 'Wiki source ↗'}</a>` : ''}
-        <br><button class="pop-share" onclick="shareSpot(${s.lat},${s.lng},${JSON.stringify(displayName(s).text)})">Share this spot</button>
-      </div>`)
+      .setContent(inner)
       .openOn(map);
     renderList();
     requestAnimationFrame(() => {
@@ -586,15 +590,13 @@ if (allSpots) {
   const dLat = parseFloat(hash.get('lat'));
   const dLng = parseFloat(hash.get('lng'));
   if (!isNaN(dLat) && !isNaN(dLng)) {
-    map.once('moveend', () => {
-      let nearest = null, bestDist = Infinity;
-      allSpots.forEach(s => {
-        const d = Math.hypot(s.lat - dLat, s.lng - dLng);
-        if (d < bestDist) { bestDist = d; nearest = s; }
-      });
-      if (nearest) selectSpot(nearest, false);
-    });
     map.setView([dLat, dLng], 14, { animate: false });
+    let nearest = null, bestDist = Infinity;
+    allSpots.forEach(s => {
+      const d = Math.hypot(s.lat - dLat, s.lng - dLng);
+      if (d < bestDist) { bestDist = d; nearest = s; }
+    });
+    if (nearest) selectSpot(nearest, false);
   }
 }
 </script>
