@@ -558,16 +558,15 @@ if (allSpots) {
   const dLat = parseFloat(hash.get('lat'));
   const dLng = parseFloat(hash.get('lng'));
   if (!isNaN(dLat) && !isNaN(dLng)) {
-    let nearest = null, bestDist = Infinity;
-    allSpots.forEach(s => {
-      const d = Math.hypot(s.lat - dLat, s.lng - dLng);
-      if (d < bestDist) { bestDist = d; nearest = s; }
-    });
-    if (nearest && bestDist < 0.01) {
-      selectSpot(nearest, true);
-    } else {
-      map.setView([dLat, dLng], 14);
-    }
+    map.setView([dLat, dLng], 14);
+    setTimeout(() => {
+      let nearest = null, bestDist = Infinity;
+      allSpots.forEach(s => {
+        const d = Math.hypot(s.lat - dLat, s.lng - dLng);
+        if (d < bestDist) { bestDist = d; nearest = s; }
+      });
+      if (nearest && bestDist < 0.01) selectSpot(nearest, false);
+    }, 400);
   }
 }
 </script>
