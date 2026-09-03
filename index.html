@@ -259,6 +259,12 @@ body { display: flex; height: 100vh; font-family: -apple-system, BlinkMacSystemF
   border-radius: 5px; font-size: 12px; text-decoration: none; font-weight: 500;
 }
 .spot-popup-inner .pop-link:hover { background: #2d7a69; }
+.spot-popup-inner .pop-share {
+  margin-top: 8px; width: 100%; padding: 6px 0;
+  background: #f0f4ff; border: 1px solid #c7d4f5; border-radius: 5px;
+  font-size: 12px; color: #3b5bdb; font-weight: 500; cursor: pointer;
+}
+.spot-popup-inner .pop-share:hover { background: #e0e8ff; }
 </style>
 </head>
 <body>
@@ -399,6 +405,7 @@ function selectSpot(s, pan = true) {
         <div class="pop-coords">${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}</div>
         <a class="pop-link" href="${esc(s.maps_url)}" target="_blank">Open in Maps ↗</a>
         ${s.source !== 'personal' ? `<a class="pop-link" href="${esc(wikiUrl(s))}" target="_blank" style="background:#4a7c6f;margin-left:6px">${s.source === 'osm' ? 'View on OSM ↗' : 'Wiki source ↗'}</a>` : ''}
+        <br><button class="pop-share" onclick="shareSpot(${s.lat},${s.lng},${JSON.stringify(displayName(s).text)})">Share this spot</button>
       </div>`)
       .openOn(map);
     renderList();
@@ -527,10 +534,41 @@ document.getElementById('search').addEventListener('input', e => {
   applyFilters();
 });
 
+// ── Share ─────────────────────────────────────────────────────────────────────
+function shareSpot(lat, lng, name) {
+  const url = `${location.origin}${location.pathname}#lat=${lat}&lng=${lng}`;
+  if (navigator.share) {
+    navigator.share({ title: name + ' — Kayak Launch Spots', url }).catch(() => {});
+  } else {
+    navigator.clipboard.writeText(url).then(() => {
+      alert('Link copied to clipboard!');
+    }).catch(() => {
+      prompt('Copy this link:', url);
+    });
+  }
+}
+
 // ── Init ─────────────────────────────────────────────────────────────────────
 if (allSpots) {
   renderMarkers();
   renderList();
+
+  // Deep link: fly to shared spot
+  const hash = new URLSearchParams(location.hash.slice(1));
+  const dLat = parseFloat(hash.get('lat'));
+  const dLng = parseFloat(hash.get('lng'));
+  if (!isNaN(dLat) && !isNaN(dLng)) {
+    let nearest = null, bestDist = Infinity;
+    allSpots.forEach(s => {
+      const d = Math.hypot(s.lat - dLat, s.lng - dLng);
+      if (d < bestDist) { bestDist = d; nearest = s; }
+    });
+    if (nearest && bestDist < 0.01) {
+      selectSpot(nearest, true);
+    } else {
+      map.setView([dLat, dLng], 14);
+    }
+  }
 }
 </script>
 
