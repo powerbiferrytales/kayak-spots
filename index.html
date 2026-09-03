@@ -540,6 +540,11 @@ function setView(mode) {
 }
 
 // ── Events ───────────────────────────────────────────────────────────────────
+map.on('baselayerchange', e => {
+  const layerMax = e.layer.options.maxZoom;
+  if (map.getZoom() > layerMax) map.setZoom(layerMax);
+});
+
 map.on('moveend zoomend', renderList);
 
 document.getElementById('search').addEventListener('input', e => {
