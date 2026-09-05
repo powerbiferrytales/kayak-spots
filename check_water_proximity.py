@@ -13,7 +13,7 @@ Usage:
     python check_water_proximity.py [--radius 150] [--delay 1.5]
 """
 
-import json, re, csv, time, argparse, pathlib, urllib.request, urllib.error
+import json, re, csv, time, argparse, pathlib, urllib.request, urllib.error, urllib.parse
 
 SPOTS_FILE  = pathlib.Path('kayak_spots.js')
 CACHE_FILE  = pathlib.Path('water_check_cache.json')
@@ -50,9 +50,9 @@ def save_cache(cache):
 
 def has_water_nearby(lat, lng, radius):
     query = WATER_QUERY.format(r=radius, lat=lat, lng=lng)
-    data = query.encode('utf-8')
-    req = urllib.request.Request(OVERPASS_URL, data=data,
-                                  headers={'Content-Type': 'application/x-www-form-urlencoded'})
+    params = urllib.parse.urlencode({'data': query})
+    url = OVERPASS_URL + '?' + params
+    req = urllib.request.Request(url, headers={'User-Agent': 'kayak-spots-checker/1.0'})
     try:
         with urllib.request.urlopen(req, timeout=15) as resp:
             result = json.loads(resp.read())
