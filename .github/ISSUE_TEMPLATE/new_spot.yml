@@ -1,0 +1,82 @@
+name: Add a new kayak spot
+description: Submit a new launch location to the map
+labels: ["new-spot"]
+body:
+  - type: input
+    id: name
+    attributes:
+      label: Spot name
+      placeholder: e.g. Stralauer Spitze
+    validations:
+      required: true
+
+  - type: input
+    id: lat
+    attributes:
+      label: Latitude
+      description: Decimal degrees, e.g. 52.48889
+      placeholder: "52.48889"
+    validations:
+      required: true
+
+  - type: input
+    id: lng
+    attributes:
+      label: Longitude
+      description: Decimal degrees, e.g. 13.48264
+      placeholder: "13.48264"
+    validations:
+      required: true
+
+  - type: input
+    id: region
+    attributes:
+      label: Region
+      placeholder: e.g. Berlin, Bavaria, Brandenburg
+    validations:
+      required: false
+
+  - type: input
+    id: country
+    attributes:
+      label: Country
+      placeholder: e.g. Germany
+    validations:
+      required: false
+
+  - type: dropdown
+    id: access
+    attributes:
+      label: Access type
+      options:
+        - Public (anyone can use)
+        - Club / members only
+        - Private (permission needed)
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Parking, access path, tidal considerations, restrictions, etc.
+      placeholder: Good parking 50m away. Slipway usable at all tides.
+    validations:
+      required: false
+
+  - type: input
+    id: source
+    attributes:
+      label: Source / reference link
+      description: Google Maps pin, OSM link, or any URL confirming the location
+      placeholder: "https://maps.google.com/?q=52.48889,13.48264"
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: verified
+    attributes:
+      label: Verification
+      options:
+        - label: I have checked the coordinates on a map and they look correct
+          required: true
