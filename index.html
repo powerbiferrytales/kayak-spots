@@ -363,8 +363,8 @@ L.control.layers(baseLayers, null, { position: 'topright', collapsed: true }).ad
 
 // ── Pin icon ─────────────────────────────────────────────────────────────────
 function makeIcon(sel, personal) {
-  const fill   = personal ? (sel ? '#1d4ed8' : '#3b82f6') : (sel ? '#c55a00' : '#ef7409');
-  const stroke = personal ? (sel ? '#1e3a8a' : '#1d4ed8') : (sel ? '#8a3e00' : '#b85800');
+  const fill   = sel ? '#c55a00' : '#ef7409';
+  const stroke = sel ? '#8a3e00' : '#b85800';
   const w = sel ? 30 : 24;
   const h = sel ? 42 : 34;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 24 34">
