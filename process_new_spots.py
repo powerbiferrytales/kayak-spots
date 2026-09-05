@@ -111,7 +111,7 @@ def main():
             print(f'    Skipping — could not parse lat/lng from issue body')
             continue
 
-        name    = fields.get('Spot name', '').strip()
+        name    = title.strip()
         region  = fields.get('Region', '').strip()
         country = fields.get('Country', '').strip()
         notes   = fields.get('Notes', '').strip()
