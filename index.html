@@ -489,7 +489,8 @@ function applyFilters() {
   if (!allSpots) return;
   const q = searchText.toLowerCase();
   filtered = allSpots.filter(s => {
-    if (s.water_flagged && !showFlagged) return false;
+    if (showFlagged) return !!s.water_flagged;
+    if (s.water_flagged) return false;
     if (sourceFilter && (s.source || 'wiki') !== sourceFilter) return false;
     if (q && !s.name.toLowerCase().includes(q) && !s.region.toLowerCase().includes(q)) return false;
     return true;
