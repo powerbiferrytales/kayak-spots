@@ -106,6 +106,10 @@ body { display: flex; height: 100vh; font-family: -apple-system, BlinkMacSystemF
 }
 .toggle-btn:hover { background: #fef3e8; }
 .toggle-btn.active { background: #ef7409; color: #fff; border-color: #c55a00; font-weight: 500; }
+#flag-toggle { padding: 0 12px 8px; }
+#flag-toggle .toggle-btn { width: 100%; color: #991b1b; border-color: #fca5a5; background: #fff1f2; }
+#flag-toggle .toggle-btn:hover { background: #fee2e2; }
+#flag-toggle .toggle-btn.active { background: #ef4444; color: #fff; border-color: #b91c1c; }
 
 #spot-list {
   flex: 1;
@@ -317,6 +321,9 @@ body { display: flex; height: 100vh; font-family: -apple-system, BlinkMacSystemF
       <button class="toggle-btn" id="btn-src-wiki" onclick="setSource('wiki')">Wiki</button>
       <button class="toggle-btn" id="btn-src-osm" onclick="setSource('osm')">OSM</button>
     </div>
+    <div id="flag-toggle">
+      <button class="toggle-btn" id="btn-flagged" onclick="toggleFlagged()" title="Show spots flagged as possibly not near water">⚑ Show flagged (189)</button>
+    </div>
   </div>
 
   <div id="spot-list"></div>
@@ -347,6 +354,7 @@ let selectedSpot = null;
 let viewMode = 'map';
 let sourceFilter = '';
 let searchText = '';
+let showFlagged = false;
 
 // ── Map ─────────────────────────────────────────────────────────────────────
 const map = L.map('map', { center: [51.5, 11], zoom: 6 });
@@ -362,9 +370,9 @@ baseLayers['Street'].addTo(map);
 L.control.layers(baseLayers, null, { position: 'topright', collapsed: true }).addTo(map);
 
 // ── Pin icon ─────────────────────────────────────────────────────────────────
-function makeIcon(sel, personal) {
-  const fill   = sel ? '#c55a00' : '#ef7409';
-  const stroke = sel ? '#8a3e00' : '#b85800';
+function makeIcon(sel, personal, flagged) {
+  const fill   = flagged ? (sel ? '#991b1b' : '#ef4444') : (sel ? '#c55a00' : '#ef7409');
+  const stroke = flagged ? (sel ? '#6b0000' : '#b91c1c') : (sel ? '#8a3e00' : '#b85800');
   const w = sel ? 30 : 24;
   const h = sel ? 42 : 34;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 24 34">
@@ -401,7 +409,7 @@ function renderMarkers() {
   markers = [];
   filtered.forEach(s => {
     const personal = s.source === 'personal';
-    const m = L.marker([s.lat, s.lng], { icon: makeIcon(false, personal) });
+    const m = L.marker([s.lat, s.lng], { icon: makeIcon(false, personal, s.water_flagged) });
     m.bindTooltip(displayName(s).text, { direction: 'top' });
     m.on('click', () => selectSpot(s, false));
     clusterGroup.addLayer(m);
@@ -416,7 +424,7 @@ function selectSpot(s, pan = true) {
 
   markers.forEach(({ m, s: ms }) => {
     const sel = ms === s;
-    m.setIcon(makeIcon(sel, ms.source === 'personal'));
+    m.setIcon(makeIcon(sel, ms.source === 'personal', ms.water_flagged));
     if (sel) m.setZIndexOffset(1000);
   });
 
@@ -425,7 +433,7 @@ function selectSpot(s, pan = true) {
     const inner = document.createElement('div');
     inner.className = 'spot-popup-inner';
     inner.innerHTML = `
-      <div class="pop-name">${esc(displayName(s).text)}</div>
+      <div class="pop-name">${esc(displayName(s).text)}${s.water_flagged ? ' <span style="color:#ef4444;font-size:11px;font-weight:600;">⚑ possibly not near water</span>' : ''}</div>
       <div class="pop-region">${esc(s.region)}${s.section ? ' · ' + esc(s.section) : ''}</div>
       <div class="pop-coords">${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}</div>
       <a class="pop-link" href="${esc(s.maps_url)}" target="_blank">Open in Maps ↗</a>
@@ -481,6 +489,7 @@ function applyFilters() {
   if (!allSpots) return;
   const q = searchText.toLowerCase();
   filtered = allSpots.filter(s => {
+    if (s.water_flagged && !showFlagged) return false;
     if (sourceFilter && (s.source || 'wiki') !== sourceFilter) return false;
     if (q && !s.name.toLowerCase().includes(q) && !s.region.toLowerCase().includes(q)) return false;
     return true;
@@ -508,7 +517,7 @@ function renderList() {
   el.innerHTML = list.map(s => {
     const sel = s === selectedSpot;
     return `<div class="spot-item${sel ? ' selected' : ''}" onclick="selectSpot(filtered[${filtered.indexOf(s)}], true)">
-      <div class="spot-name${displayName(s).fallback ? ' fallback' : ''}" title="${esc(displayName(s).text)}">${esc(displayName(s).text)}</div>
+      <div class="spot-name${displayName(s).fallback ? ' fallback' : ''}" title="${esc(displayName(s).text)}">${s.water_flagged ? '<span style="color:#ef4444;margin-right:4px;" title="Flagged: possibly not near water">⚑</span>' : ''}${esc(displayName(s).text)}</div>
       <div class="spot-meta">${esc(s.region)}${s.section ? ' · ' + esc(s.section) : ''}</div>
       <div class="spot-coords">${s.lat.toFixed(4)}, ${s.lng.toFixed(4)}</div>
     </div>`;
@@ -531,6 +540,13 @@ function setSource(src) {
   document.getElementById('btn-src-all').classList.toggle('active', src === '');
   document.getElementById('btn-src-wiki').classList.toggle('active', src === 'wiki');
   document.getElementById('btn-src-osm').classList.toggle('active', src === 'osm');
+  applyFilters();
+}
+
+// ── Flagged toggle ───────────────────────────────────────────────────────────
+function toggleFlagged() {
+  showFlagged = !showFlagged;
+  document.getElementById('btn-flagged').classList.toggle('active', showFlagged);
   applyFilters();
 }
 
