@@ -147,6 +147,18 @@ body { display: flex; height: 100vh; font-family: -apple-system, BlinkMacSystemF
   margin-top: 1px;
 }
 .spot-name.fallback { color: #aaa; font-style: italic; font-weight: 400; }
+.access-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-left: 5px;
+  vertical-align: middle;
+  line-height: 1.5;
+}
+.access-badge.club    { background: #f0f0f0; color: #888; }
+.access-badge.private { background: #fff0f0; color: #c44; }
 
 #empty-msg {
   padding: 24px 16px;
@@ -317,6 +329,10 @@ body { display: flex; height: 100vh; font-family: -apple-system, BlinkMacSystemF
       <button class="toggle-btn" id="btn-src-wiki" onclick="setSource('wiki')">Wiki</button>
       <button class="toggle-btn" id="btn-src-osm" onclick="setSource('osm')">OSM</button>
     </div>
+    <div id="access-toggle">
+      <button class="toggle-btn active" id="btn-access-all" onclick="setAccessFilter(true)">All spots</button>
+      <button class="toggle-btn" id="btn-access-public" onclick="setAccessFilter(false)">Public only</button>
+    </div>
   </div>
 
   <div id="spot-list"></div>
@@ -347,6 +363,7 @@ let selectedSpot = null;
 let viewMode = 'map';
 let sourceFilter = '';
 let searchText = '';
+let showPrivate = true;
 
 // ── Map ─────────────────────────────────────────────────────────────────────
 const map = L.map('map', { center: [51.5, 11], zoom: 6 });
@@ -362,9 +379,10 @@ baseLayers['Street'].addTo(map);
 L.control.layers(baseLayers, null, { position: 'topright', collapsed: true }).addTo(map);
 
 // ── Pin icon ─────────────────────────────────────────────────────────────────
-function makeIcon(sel, personal) {
-  const fill   = sel ? '#c55a00' : '#ef7409';
-  const stroke = sel ? '#8a3e00' : '#b85800';
+function makeIcon(sel, personal, access) {
+  const restricted = access === 'club' || access === 'private';
+  const fill   = sel ? (restricted ? '#777' : '#c55a00') : (restricted ? '#aaa' : '#ef7409');
+  const stroke = sel ? (restricted ? '#555' : '#8a3e00') : (restricted ? '#888' : '#b85800');
   const w = sel ? 30 : 24;
   const h = sel ? 42 : 34;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 24 34">
@@ -401,7 +419,7 @@ function renderMarkers() {
   markers = [];
   filtered.forEach(s => {
     const personal = s.source === 'personal';
-    const m = L.marker([s.lat, s.lng], { icon: makeIcon(false, personal) });
+    const m = L.marker([s.lat, s.lng], { icon: makeIcon(false, personal, s.access) });
     m.bindTooltip(displayName(s).text, { direction: 'top' });
     m.on('click', () => selectSpot(s, false));
     clusterGroup.addLayer(m);
@@ -416,7 +434,7 @@ function selectSpot(s, pan = true) {
 
   markers.forEach(({ m, s: ms }) => {
     const sel = ms === s;
-    m.setIcon(makeIcon(sel, ms.source === 'personal'));
+    m.setIcon(makeIcon(sel, ms.source === 'personal', ms.access));
     if (sel) m.setZIndexOffset(1000);
   });
 
@@ -424,8 +442,10 @@ function selectSpot(s, pan = true) {
     map.closePopup();
     const inner = document.createElement('div');
     inner.className = 'spot-popup-inner';
+    const accessBadge = (s.access === 'club' || s.access === 'private')
+      ? `<span class="access-badge ${s.access}">${s.access === 'club' ? 'Club' : 'Private'}</span>` : '';
     inner.innerHTML = `
-      <div class="pop-name">${esc(displayName(s).text)}</div>
+      <div class="pop-name">${esc(displayName(s).text)}${accessBadge}</div>
       <div class="pop-region">${esc(s.region)}${s.section ? ' · ' + esc(s.section) : ''}</div>
       <div class="pop-coords">${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}</div>
       <a class="pop-link" href="${esc(s.maps_url)}" target="_blank">Open in Maps ↗</a>
@@ -482,6 +502,7 @@ function applyFilters() {
   const q = searchText.toLowerCase();
   filtered = allSpots.filter(s => {
     if (sourceFilter && (s.source || 'wiki') !== sourceFilter) return false;
+    if (!showPrivate && (s.access === 'club' || s.access === 'private')) return false;
     if (q && !s.name.toLowerCase().includes(q) && !s.region.toLowerCase().includes(q)) return false;
     return true;
   });
@@ -507,8 +528,10 @@ function renderList() {
 
   el.innerHTML = list.map(s => {
     const sel = s === selectedSpot;
+    const badge = (s.access === 'club' || s.access === 'private')
+      ? `<span class="access-badge ${s.access}">${s.access === 'club' ? 'Club' : 'Private'}</span>` : '';
     return `<div class="spot-item${sel ? ' selected' : ''}" onclick="selectSpot(filtered[${filtered.indexOf(s)}], true)">
-      <div class="spot-name${displayName(s).fallback ? ' fallback' : ''}" title="${esc(displayName(s).text)}">${esc(displayName(s).text)}</div>
+      <div class="spot-name${displayName(s).fallback ? ' fallback' : ''}" title="${esc(displayName(s).text)}">${esc(displayName(s).text)}${badge}</div>
       <div class="spot-meta">${esc(s.region)}${s.section ? ' · ' + esc(s.section) : ''}</div>
       <div class="spot-coords">${s.lat.toFixed(4)}, ${s.lng.toFixed(4)}</div>
     </div>`;
@@ -523,6 +546,14 @@ function updateCount(visible) {
   document.getElementById('count-line').textContent = viewMode === 'map'
     ? `${visible} visible · ${total} total · ${grand} all`
     : `${total} spots${sourceFilter || searchText ? ' (filtered)' : ''}`;
+}
+
+// ── Access filter ────────────────────────────────────────────────────────────
+function setAccessFilter(show) {
+  showPrivate = show;
+  document.getElementById('btn-access-all').classList.toggle('active', show);
+  document.getElementById('btn-access-public').classList.toggle('active', !show);
+  applyFilters();
 }
 
 // ── Source filter ────────────────────────────────────────────────────────────
